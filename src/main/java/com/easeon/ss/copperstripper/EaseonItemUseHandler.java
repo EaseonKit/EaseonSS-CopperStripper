@@ -49,14 +49,14 @@ public class EaseonItemUseHandler {
             if (strippedCopper == null) return ActionResult.PASS;
 
             axeStack.damage(player);
-            player.giveOrDropItem(strippedCopper);
-            player.removeItem(copperStack);
+            player.giveOrDropItem(strippedCopper, 1);
+            player.removeItem(copperStack, 1);
 
-            world.playSound(player, SoundEvents.ITEM_AXE_STRIP, SoundCategory.PLAYERS);
+            world.playSound(player.getPos(), SoundEvents.ITEM_AXE_STRIP, SoundCategory.PLAYERS, 1.0f);
             if (mainIsAxe)
-                player.swingHand(Hand.MAIN_HAND, true);
+                player.swingHand(Hand.MAIN_HAND);
             else
-                player.swingHand(Hand.OFF_HAND, true);
+                player.swingHand(Hand.OFF_HAND);
 
             return ActionResult.SUCCESS;
         }
