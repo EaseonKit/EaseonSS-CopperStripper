@@ -11,6 +11,7 @@ import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
+import net.minecraft.util.Identifier;
 import net.minecraft.world.World;
 
 public class EaseonItemUseHandler {
@@ -51,8 +52,8 @@ public class EaseonItemUseHandler {
             axeStack.damage(player);
             player.giveOrDropItem(strippedCopper, 1);
             player.removeItem(copperStack, 1);
+            world.playSound(player.getPos(), SoundEvents.ITEM_AXE_WAX_OFF, SoundCategory.PLAYERS, 1.0f);
 
-            world.playSound(player.getPos(), SoundEvents.ITEM_AXE_STRIP, SoundCategory.PLAYERS, 1.0f);
             if (mainIsAxe)
                 player.swingHand(Hand.MAIN_HAND);
             else
