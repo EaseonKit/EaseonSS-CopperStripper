@@ -2,66 +2,52 @@ package com.easeon.ss.copperstripper;
 
 import com.easeon.ss.core.helper.CopperHelper;
 import com.easeon.ss.core.util.system.EaseonLogger;
-import com.easeon.ss.core.wrapper.EaseonItem;
-import com.easeon.ss.core.wrapper.EaseonPlayer;
-import com.easeon.ss.core.wrapper.EaseonWorld;
+import com.easeon.ss.core.wrapper.*;
 import net.minecraft.item.*;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.Identifier;
-import net.minecraft.world.World;
+import net.minecraft.sound.*;
+import net.minecraft.util.*;
+import java.util.Optional;
 
 public class EaseonItemUseHandler {
     private final static EaseonLogger logger = EaseonLogger.of();
 
-    public static ActionResult onUseItem(ServerPlayerEntity playerEntity, World mcWorld, Hand hand) {
-        var world = new EaseonWorld(mcWorld);
-        if (world.isClient()) return ActionResult.PASS;
-        if (hand != Hand.MAIN_HAND) return ActionResult.PASS;
+    public static ActionResult onUseItem(EaseonWorld world, EaseonPlayer player, Hand hand) {
+        if (world.isClient() || hand != Hand.MAIN_HAND)
+            return ActionResult.PASS;
 
-        var player = new EaseonPlayer(playerEntity);
+        final var main = player.getMainHandStack();
+        final var off = player.getOffHandStack();
 
-        var mainHand = player.getMainHandStack();
-        var offHand = player.getOffHandStack();
-
-        var mainIsAxe = mainHand.of(AxeItem.class);
-        var offIsAxe = offHand.of(AxeItem.class);
-        var mainIsCopper = CopperHelper.isCopper(mainHand);
-        var offIsCopper = CopperHelper.isCopper(offHand);
-
-        if ((mainIsAxe && offIsCopper) || (offIsAxe && mainIsCopper)) {
-            var axeStack = mainIsAxe ? mainHand : offHand;
-            var copperStack = mainIsCopper ? mainHand : offHand;
-
-            EaseonItem strippedCopper = null;
-            var unwaxed = CopperHelper.removeWax(copperStack);
-            if (unwaxed.isPresent()) {
-                strippedCopper = unwaxed.get().easeonItem();
-            } else {
-                var deoxidized = CopperHelper.deoxidize(copperStack);
-                if (deoxidized.isPresent()) {
-                    strippedCopper = deoxidized.get().easeonItem();
-                }
-            }
-
-            if (strippedCopper == null) return ActionResult.PASS;
-
-            axeStack.damage(player);
-            player.giveOrDropItem(strippedCopper, 1);
-            player.removeItem(copperStack, 1);
-            world.playSound(player.getPos(), SoundEvents.ITEM_AXE_WAX_OFF, SoundCategory.PLAYERS, 1.0f);
-
-            if (mainIsAxe)
-                player.swingHand(Hand.MAIN_HAND);
-            else
-                player.swingHand(Hand.OFF_HAND);
-
-            return ActionResult.SUCCESS;
+        EaseonItem tool;
+        EaseonItem copper;
+        Hand swing = Hand.MAIN_HAND;
+        if (main.of(AxeItem.class) && CopperHelper.isCopper(off)) {
+            tool = main;
+            copper = off;
+        }
+        else if (off.of(AxeItem.class) && CopperHelper.isCopper(main)) {
+            tool = off;
+            copper = main;
+            swing = Hand.OFF_HAND;
+        }
+        else {
+            return ActionResult.PASS;
         }
 
-        return ActionResult.PASS;
+        final var reward = processCopper(copper).orElse(null);
+        if (reward == null)
+            return ActionResult.PASS;
+
+        tool.damage(player);
+        player.giveOrDropItem(reward.easeonItem(), 1);
+        player.removeItem(copper, 1);
+        world.playSound(player.getPos(), SoundEvents.ITEM_AXE_WAX_OFF, SoundCategory.PLAYERS, 1.0f);
+        player.swingHand(swing);
+
+        return ActionResult.SUCCESS;
+    }
+
+    private static Optional<EaseonBlock> processCopper(EaseonItem copper) {
+        return CopperHelper.removeWax(copper).or(() -> CopperHelper.deoxidize(copper));
     }
 }
